@@ -120,16 +120,18 @@ The ad should look professional and trustworthy, suitable for online advertising
     return prompt, colors
 
 def generate_image_with_vertex_ai(prompt):
-    """Generate image using Vertex AI Imagen"""
+    """Generate image using Vertex AI Imagen API"""
     if not PROJECT_ID:
+        print("No PROJECT_ID configured, skipping Vertex AI generation")
         return None
     
     try:
+        # Try using the vision_models ImageGenerationModel (preferred method)
         from vertexai.preview.vision_models import ImageGenerationModel
         
         model = ImageGenerationModel.from_pretrained("imagegeneration@006")
         
-        # Generate image
+        # Generate image with Vertex AI Imagen
         response = model.generate_images(
             prompt=prompt,
             number_of_images=1,
@@ -138,18 +140,24 @@ def generate_image_with_vertex_ai(prompt):
             person_generation="allow_all",
         )
         
-        if response.images:
-            # Convert to PIL Image
+        if response.images and len(response.images) > 0:
+            # Get image bytes
             image_bytes = response.images[0]._image_bytes
             img = PILImage.open(io.BytesIO(image_bytes))
-            # Resize to 1200x628
+            # Resize to 1200x628 (standard ad size)
             img = img.resize((1200, 628), PILImage.Resampling.LANCZOS)
+            print(f"Successfully generated image with Vertex AI Imagen")
             return img
-        
-        return None
-    except ImportError:
-        # Fallback: Try using GenerativeModel with Imagen
+        else:
+            print("No images returned from Vertex AI")
+            return None
+            
+    except ImportError as e:
+        print(f"ImportError: {e}. Trying alternative method...")
+        # Fallback: Try using the generative models API
         try:
+            from vertexai.generative_models import GenerativeModel
+            
             model = GenerativeModel("imagen-3.0-generate-001")
             response = model.generate_content(prompt)
             
@@ -160,13 +168,16 @@ def generate_image_with_vertex_ai(prompt):
                         if hasattr(part, 'inline_data') and part.inline_data:
                             img = PILImage.open(io.BytesIO(part.inline_data.data))
                             img = img.resize((1200, 628), PILImage.Resampling.LANCZOS)
+                            print(f"Successfully generated image with GenerativeModel")
                             return img
             return None
-        except Exception as e:
-            print(f"Error generating image with Imagen: {e}")
+        except Exception as e2:
+            print(f"Fallback method error: {e2}")
             return None
     except Exception as e:
-        print(f"Error generating image: {e}")
+        print(f"Error generating image with Vertex AI: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def create_placeholder_image(headline, subheadline, cta, colors):
@@ -298,12 +309,16 @@ def generate_ads():
             subheadline = prompt.split('Subheadline text: "')[1].split('"')[0] if 'Subheadline text: "' in prompt else "Expert Service"
             cta = prompt.split('Call-to-action button text: "')[1].split('"')[0] if 'Call-to-action button text: "' in prompt else "Get Started"
             
-            # Try to generate with Vertex AI
+            # Always try to generate with Vertex AI API first
+            print(f"Generating ad {i+1}/{num_ads} with Vertex AI...")
             img = generate_image_with_vertex_ai(prompt)
             
             if not img:
-                # Create placeholder if Vertex AI fails
+                # Only create placeholder if Vertex AI API fails
+                print(f"Vertex AI generation failed for ad {i+1}, creating placeholder...")
                 img = create_placeholder_image(headline, subheadline, cta, colors)
+            else:
+                print(f"Successfully generated ad {i+1} with Vertex AI API")
             
             # Save image
             filename = f'ad_{i+1:03d}.png'
