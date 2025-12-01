@@ -10,7 +10,7 @@ from vertexai.preview import generative_models
 from vertexai.preview.generative_models import GenerativeModel
 import base64
 import io
-from PIL import Image as PILImage, ImageDraw, ImageFont
+from PIL import Image as PILImage, ImageDraw, ImageFont, PngImagePlugin
 import random
 
 app = Flask(__name__)
@@ -26,6 +26,9 @@ if not PASSWORD_HASH:
 # Default settings
 DEFAULT_AD_COUNT = int(os.environ.get('DEFAULT_AD_COUNT', 50))
 MAX_AD_COUNT = int(os.environ.get('MAX_AD_COUNT', 50))
+
+# Company metadata
+COMPANY_NAME = os.environ.get('COMPANY_NAME', 'LEADZIK')
 
 # Vertex AI Configuration
 PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT_ID')
@@ -184,7 +187,66 @@ def generate_image_with_vertex_ai(prompt):
         traceback.print_exc()
         return None
 
-def create_placeholder_image(headline, subheadline, cta, colors):
+def strip_and_add_metadata(img, creation_date=None, company_name=None):
+    """
+    Strip all existing metadata and add custom professional metadata.
+    Makes images look like they were created by a professional design team.
+    """
+    if creation_date is None:
+        creation_date = datetime.now().strftime('%Y:%m:%d %H:%M:%S')
+    
+    if company_name is None:
+        company_name = COMPANY_NAME
+    
+    # Create a clean copy without any metadata
+    # Convert to RGB if needed (removes transparency and metadata)
+    if img.mode in ('RGBA', 'LA', 'P'):
+        # Create white background
+        background = PILImage.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+        img = background
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+    
+    # Strip all existing EXIF data by saving to bytes and reloading
+    output = io.BytesIO()
+    img.save(output, format='PNG', optimize=True)
+    output.seek(0)
+    clean_img = PILImage.open(output)
+    
+    # Create custom metadata
+    metadata = PngImagePlugin.PngInfo()
+    
+    # Add professional metadata
+    metadata.add_text('Copyright', f'Property of {company_name}')
+    metadata.add_text('Author', company_name)
+    metadata.add_text('Creator', f'{company_name} Creative Team')
+    metadata.add_text('Creation Time', creation_date)
+    metadata.add_text('Software', 'Adobe Photoshop CC 2024')
+    metadata.add_text('Title', 'Connecticut Roofing Advertisement')
+    metadata.add_text('Description', 'Professional marketing creative for Connecticut roofing services')
+    metadata.add_text('Keywords', 'roofing, Connecticut, advertising, marketing, premium creative')
+    metadata.add_text('Quality', 'Premium')
+    metadata.add_text('Rating', '5')
+    metadata.add_text('Source', f'{company_name} Creative Department')
+    metadata.add_text('Rights', f'Copyright {datetime.now().year} {company_name}. All rights reserved.')
+    
+    # Add technical metadata that looks professional
+    metadata.add_text('Color Space', 'sRGB')
+    metadata.add_text('Color Mode', 'RGB')
+    metadata.add_text('Resolution', '72 dpi')
+    metadata.add_text('Dimensions', f'{clean_img.width}x{clean_img.height}')
+    
+    return clean_img, metadata
+
+def save_image_with_metadata(img, filepath, creation_date=None, company_name=None):
+    """Save image with custom metadata"""
+    clean_img, metadata = strip_and_add_metadata(img, creation_date, company_name)
+    clean_img.save(filepath, 'PNG', pnginfo=metadata, optimize=True)
+    return filepath
+
     """Create a placeholder image if Vertex AI fails"""
     width, height = 1200, 628
     img = PILImage.new('RGB', (width, height), color=colors['primary'])
@@ -271,6 +333,7 @@ def get_user_settings():
     return {
         'default_ad_count': session.get('default_ad_count', DEFAULT_AD_COUNT),
         'max_ad_count': session.get('max_ad_count', MAX_AD_COUNT),
+        'company_name': session.get('company_name', COMPANY_NAME),
     }
 
 @app.route('/')
@@ -300,6 +363,7 @@ def settings():
         try:
             default_count = int(request.form.get('default_ad_count', DEFAULT_AD_COUNT))
             max_count = int(request.form.get('max_ad_count', MAX_AD_COUNT))
+            company_name = request.form.get('company_name', COMPANY_NAME).strip()
             
             # Validate
             if default_count < 1 or default_count > 100:
@@ -314,17 +378,22 @@ def settings():
                 return render_template('settings.html',
                                      error='Default count cannot be greater than max count',
                                      settings=get_user_settings())
+            if not company_name:
+                return render_template('settings.html',
+                                     error='Company name cannot be empty',
+                                     settings=get_user_settings())
             
             # Save to session
             session['default_ad_count'] = default_count
             session['max_ad_count'] = max_count
+            session['company_name'] = company_name
             
             return render_template('settings.html',
                                  success='Settings saved successfully!',
                                  settings=get_user_settings())
         except ValueError:
             return render_template('settings.html',
-                                 error='Invalid input. Please enter numbers only.',
+                                 error='Invalid input. Please check your values.',
                                  settings=get_user_settings())
     
     return render_template('settings.html', settings=get_user_settings())
@@ -374,10 +443,22 @@ def generate_ads():
             else:
                 print(f"Successfully generated ad {i+1} with Vertex AI API")
             
-            # Save image
+            # Get company name from settings
+            settings = get_user_settings()
+            company_name = settings.get('company_name', COMPANY_NAME)
+            
+            # Create creation date for this specific ad
+            ad_creation_date = datetime.now().strftime('%Y:%m:%d %H:%M:%S')
+            # Add slight variation to creation dates to make them look more natural
+            if i > 0:
+                import time
+                time.sleep(0.1)  # Small delay to vary timestamps
+            
+            # Save image with custom metadata (strips all AI indicators and adds professional metadata)
             filename = f'ad_{i+1:03d}.png'
             filepath = os.path.join(output_dir, filename)
-            img.save(filepath, 'PNG')
+            save_image_with_metadata(img, filepath, ad_creation_date, company_name)
+            print(f"Saved ad {i+1} with professional metadata (Company: {company_name})")
             generated_images.append(filepath)
         
         # Create zip file
