@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecticut Roofing Ad Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 32px;
+        }
+        
+        .logout-btn {
+            padding: 10px 20px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .main-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input[type="number"] {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 100px;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .generate-btn {
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            display: block;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            display: block;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+            display: block;
+        }
+        
+        .download-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #45a049;
+        }
+        
+        .features {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .feature {
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .feature h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .feature p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Connecticut Roofing Ad Creator</h1>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </header>
+        
+        <div class="main-card">
+            <p class="description">
+                Generate unique static advertising images for Connecticut roofing services. 
+                Each ad will have unique text, colors, CTAs, and styling. No company names, 
+                phone numbers, or contact information included.
+            </p>
+            
+            <div class="controls">
+                <div class="input-group">
+                    <label for="ad-count">Number of Ads:</label>
+                    <input type="number" id="ad-count" value="50" min="1" max="100">
+                </div>
+                <button class="generate-btn" id="generate-btn" onclick="generateAds()">
+                    Generate Ads
+                </button>
+            </div>
+            
+            <div id="status" class="status"></div>
+            <div id="download-container" style="display: none;">
+                <a id="download-link" href="#" class="download-btn">Download ZIP File</a>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>🎨 Unique Variations</h3>
+                    <p>Each ad has unique headlines, colors, CTAs, and styling</p>
+                </div>
+                <div class="feature">
+                    <h3>🏘️ Connecticut Focused</h3>
+                    <p>All ads are tailored for Connecticut roofing market</p>
+                </div>
+                <div class="feature">
+                    <h3>📦 Ready to Use</h3>
+                    <p>Download all ads as a convenient ZIP file</p>
+                </div>
+                <div class="feature">
+                    <h3>🚫 No Contact Info</h3>
+                    <p>Clean ads without company names or contact details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function generateAds() {
+            const count = parseInt(document.getElementById('ad-count').value);
+            const btn = document.getElementById('generate-btn');
+            const status = document.getElementById('status');
+            const downloadContainer = document.getElementById('download-container');
+            
+            if (count < 1 || count > 100) {
+                status.className = 'status error';
+                status.textContent = 'Please enter a number between 1 and 100';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Generating...';
+            status.className = 'status info';
+            status.textContent = `Generating ${count} ads... This may take a few minutes.`;
+            downloadContainer.style.display = 'none';
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ count: count })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    status.className = 'status success';
+                    status.textContent = data.message || `Successfully generated ${count} ads!`;
+                    
+                    const downloadLink = document.getElementById('download-link');
+                    downloadLink.href = data.download_url || '/download';
+                    downloadLink.textContent = `Download ${data.zip_filename || 'ads.zip'}`;
+                    downloadContainer.style.display = 'block';
+                } else {
+                    status.className = 'status error';
+                    status.textContent = data.error || 'An error occurred while generating ads';
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = 'Network error: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Ads';
+            }
+        }
+        
+        // Allow Enter key to trigger generation
+        document.getElementById('ad-count').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateAds();
+            }
+        });
+    </script>
+</body>
+</html>
+
