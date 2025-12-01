@@ -213,7 +213,10 @@
     <div class="container">
         <header>
             <h1>🏠 Connecticut Roofing Ad Creator</h1>
-            <a href="/logout" class="logout-btn">Logout</a>
+            <div style="display: flex; gap: 15px;">
+                <a href="/settings" style="padding: 10px 20px; background: #667eea; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">Settings</a>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
         </header>
         
         <div class="main-card">
@@ -226,7 +229,7 @@
             <div class="controls">
                 <div class="input-group">
                     <label for="ad-count">Number of Ads:</label>
-                    <input type="number" id="ad-count" value="50" min="1" max="100">
+                    <input type="number" id="ad-count" value="{{ settings.default_ad_count }}" min="1" max="{{ settings.max_ad_count }}">
                 </div>
                 <button class="generate-btn" id="generate-btn" onclick="generateAds()">
                     Generate Ads
@@ -261,14 +264,16 @@
     
     <script>
         async function generateAds() {
-            const count = parseInt(document.getElementById('ad-count').value);
+            const countInput = document.getElementById('ad-count');
+            const maxCount = parseInt(countInput.getAttribute('max'));
+            const count = parseInt(countInput.value);
             const btn = document.getElementById('generate-btn');
             const status = document.getElementById('status');
             const downloadContainer = document.getElementById('download-container');
             
-            if (count < 1 || count > 100) {
+            if (count < 1 || count > maxCount) {
                 status.className = 'status error';
-                status.textContent = 'Please enter a number between 1 and 100';
+                status.textContent = `Please enter a number between 1 and ${maxCount}`;
                 return;
             }
             

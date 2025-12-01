@@ -23,6 +23,10 @@ if not PASSWORD_HASH:
     plain_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
     PASSWORD_HASH = generate_password_hash(plain_password)
 
+# Default settings
+DEFAULT_AD_COUNT = int(os.environ.get('DEFAULT_AD_COUNT', 50))
+MAX_AD_COUNT = int(os.environ.get('MAX_AD_COUNT', 50))
+
 # Vertex AI Configuration
 PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT_ID')
 LOCATION = os.environ.get('GOOGLE_CLOUD_LOCATION', 'us-central1')
@@ -262,11 +266,19 @@ def create_placeholder_image(headline, subheadline, cta, colors):
     
     return img
 
+def get_user_settings():
+    """Get user settings from session, with defaults"""
+    return {
+        'default_ad_count': session.get('default_ad_count', DEFAULT_AD_COUNT),
+        'max_ad_count': session.get('max_ad_count', MAX_AD_COUNT),
+    }
+
 @app.route('/')
 def index():
     if 'authenticated' not in session:
         return redirect(url_for('login'))
-    return render_template('index.html')
+    settings = get_user_settings()
+    return render_template('index.html', settings=settings)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -279,6 +291,44 @@ def login():
             return render_template('login.html', error='Invalid password')
     return render_template('login.html')
 
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if 'authenticated' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        try:
+            default_count = int(request.form.get('default_ad_count', DEFAULT_AD_COUNT))
+            max_count = int(request.form.get('max_ad_count', MAX_AD_COUNT))
+            
+            # Validate
+            if default_count < 1 or default_count > 100:
+                return render_template('settings.html', 
+                                     error='Default ad count must be between 1 and 100',
+                                     settings=get_user_settings())
+            if max_count < 1 or max_count > 100:
+                return render_template('settings.html',
+                                     error='Max ad count must be between 1 and 100',
+                                     settings=get_user_settings())
+            if default_count > max_count:
+                return render_template('settings.html',
+                                     error='Default count cannot be greater than max count',
+                                     settings=get_user_settings())
+            
+            # Save to session
+            session['default_ad_count'] = default_count
+            session['max_ad_count'] = max_count
+            
+            return render_template('settings.html',
+                                 success='Settings saved successfully!',
+                                 settings=get_user_settings())
+        except ValueError:
+            return render_template('settings.html',
+                                 error='Invalid input. Please enter numbers only.',
+                                 settings=get_user_settings())
+    
+    return render_template('settings.html', settings=get_user_settings())
+
 @app.route('/logout')
 def logout():
     session.pop('authenticated', None)
@@ -290,9 +340,13 @@ def generate_ads():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        num_ads = int(request.json.get('count', 50))
-        if num_ads < 1 or num_ads > 100:
-            return jsonify({'error': 'Count must be between 1 and 100'}), 400
+        settings = get_user_settings()
+        default_count = settings['default_ad_count']
+        max_count = settings['max_ad_count']
+        
+        num_ads = int(request.json.get('count', default_count))
+        if num_ads < 1 or num_ads > max_count:
+            return jsonify({'error': f'Count must be between 1 and {max_count}'}), 400
         
         # Create output directory
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
